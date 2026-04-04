@@ -65,7 +65,7 @@ def _process_video(input_path: Path, output_path: Path) -> tuple[bool, str]:
         "-af", "pan=stereo|c0=c0|c1=-1*c1",
         "-map_metadata", "-1",
         "-metadata", "handler_name=CleanedByMicroAudio",
-        "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+        "-c:v", "libx264", "-crf", "23", "-preset", "ultrafast",
         "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
