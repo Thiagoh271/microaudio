@@ -3,33 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MicroAudio</title>
+    <title>ChangeEditor — Blindagem de Criativos</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="header">
-        <h1>MicroAudio</h1>
-        <p>Blindagem completa de criativos para anuncios</p>
+    <!-- NAV -->
+    <nav class="nav">
+        <a class="nav-logo" href="#">
+            <div class="nav-logo-icon">⚡</div>
+            ChangeEditor
+        </a>
+        <span class="nav-badge">Blindagem de Criativos</span>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-pill">Edição cirúrgica e blindagem de ativos</div>
+        <h1>
+            Eles rastreiam padrões.<br>
+            <span class="gradient">Nós os eliminamos.</span>
+        </h1>
+        <p class="hero-sub">
+            O ChangeEditor blinda seus criativos contra detecção algorítmica.
+            Sanitização profunda em 4 camadas — metadados, hash, visual e áudio.
+        </p>
+    </section>
+
+    <!-- STATS -->
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-label"><span class="stat-dot"></span> Camada 1</div>
+            <div class="stat-value">Metadados</div>
+            <div class="stat-desc">Remove rastros de software</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label"><span class="stat-dot"></span> Camada 2</div>
+            <div class="stat-value">Fingerprint</div>
+            <div class="stat-desc">Gera novo hash único</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label"><span class="stat-dot"></span> Camada 3</div>
+            <div class="stat-value">Visual</div>
+            <div class="stat-desc">Quebra detecção de frames</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label"><span class="stat-dot"></span> Camada 4</div>
+            <div class="stat-value">Áudio</div>
+            <div class="stat-desc">Bloqueia transcrição</div>
+        </div>
     </div>
 
+    <!-- CARD -->
     <div class="card">
 
         {% if not ffmpeg_ok %}
         <div class="ffmpeg-warning">
-            FFmpeg nao encontrado no sistema. Instale o FFmpeg e adicione ao PATH para usar esta ferramenta.
+            FFmpeg não encontrado. Instale e adicione ao PATH para usar esta ferramenta.
         </div>
         {% endif %}
 
         <div class="drop-zone {% if not ffmpeg_ok %}disabled{% endif %}" id="dropZone">
-            <div class="drop-zone-icon">&#127916;</div>
+            <div class="drop-zone-icon">🎬</div>
             <div class="drop-zone-text">
                 Arraste seu <strong>MP4</strong> aqui<br>ou clique para selecionar
             </div>
-            <div class="drop-zone-hint">Apenas arquivos .mp4</div>
+            <div class="drop-zone-hint">Apenas arquivos .mp4 · Até 2GB</div>
             <input type="file" class="file-input" id="fileInput" accept=".mp4,video/mp4">
+        </div>
+
+        <div class="layer-badges" id="layerBadges">
+            <div class="layer-badge" id="badge1"><span class="badge-dot"></span> Metadados</div>
+            <div class="layer-badge" id="badge2"><span class="badge-dot"></span> Hash</div>
+            <div class="layer-badge" id="badge3"><span class="badge-dot"></span> Visual</div>
+            <div class="layer-badge" id="badge4"><span class="badge-dot"></span> Áudio</div>
         </div>
 
         <div class="progress-area" id="progressArea">
@@ -44,16 +93,14 @@
 
         <div class="message" id="messageBox"></div>
 
-        <a class="download-btn" id="downloadBtn" href="#">Baixar MP4 processado</a>
+        <a class="download-btn" id="downloadBtn" href="#">⬇ Baixar criativo blindado</a>
 
         <div class="reset-link" id="resetLink">
             <a id="resetBtn">Processar outro arquivo</a>
         </div>
     </div>
 
-    <div class="footer">
-        MicroAudio &mdash; localhost tool
-    </div>
+    <div class="footer">ChangeEditor &mdash; Blindagem profissional de criativos</div>
 
 <script>
 (function() {
@@ -67,57 +114,48 @@
     const downloadBtn  = document.getElementById('downloadBtn');
     const resetLink    = document.getElementById('resetLink');
     const resetBtn     = document.getElementById('resetBtn');
+    const badges       = [
+        document.getElementById('badge1'),
+        document.getElementById('badge2'),
+        document.getElementById('badge3'),
+        document.getElementById('badge4'),
+    ];
 
-    // --- Drop zone events ---
     dropZone.addEventListener('click', () => fileInput.click());
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('drag-over');
-    });
-
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropZone.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) handleFile(files[0]);
+        if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
     });
-
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) handleFile(fileInput.files[0]);
-    });
-
+    fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) handleFile(fileInput.files[0]); });
     resetBtn.addEventListener('click', resetUI);
 
-    // --- Core logic ---
     function handleFile(file) {
-        // Client-side validation
         if (!file.name.toLowerCase().endsWith('.mp4')) {
-            showMessage('Formato invalido. Apenas arquivos MP4 sao aceitos.', 'error');
+            showMessage('Formato inválido. Apenas arquivos MP4 são aceitos.', 'error');
             return;
         }
-
         uploadFile(file);
+    }
+
+    function activateBadge(index) {
+        badges.forEach((b, i) => b.classList.toggle('active', i === index));
     }
 
     function uploadFile(file) {
         const formData = new FormData();
         formData.append('file', file);
-
         const xhr = new XMLHttpRequest();
 
-        // Show progress
         progressArea.classList.add('active');
         dropZone.classList.add('disabled');
         hideMessage();
         downloadBtn.classList.remove('active');
         resetLink.classList.remove('active');
+        badges.forEach(b => b.classList.remove('active'));
 
-        // Upload progress
         xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
                 const pct = Math.round((e.loaded / e.total) * 100);
@@ -132,20 +170,24 @@
             progressPct.textContent = '';
             progressBar.style.width = '100%';
             progressBar.classList.add('indeterminate');
-            // Anima as camadas de blindagem sequencialmente
+
             const layers = [
-                'Camada 1: Limpando metadados...',
-                'Camada 2: Alterando fingerprint...',
-                'Camada 3: Ofuscacao visual...',
-                'Camada 4: Blindagem de audio...',
-                'Finalizando...',
+                { text: 'Camada 1: Limpando metadados...', badge: 0 },
+                { text: 'Camada 2: Alterando fingerprint...', badge: 1 },
+                { text: 'Camada 3: Ofuscação visual...', badge: 2 },
+                { text: 'Camada 4: Blindagem de áudio...', badge: 3 },
+                { text: 'Finalizando...', badge: -1 },
             ];
             let i = 0;
-            progressText.textContent = layers[0];
+            progressText.textContent = layers[0].text;
+            activateBadge(0);
+
             const interval = setInterval(() => {
                 i++;
                 if (i < layers.length) {
-                    progressText.textContent = layers[i];
+                    progressText.textContent = layers[i].text;
+                    if (layers[i].badge >= 0) activateBadge(layers[i].badge);
+                    else badges.forEach(b => b.classList.remove('active'));
                 } else {
                     clearInterval(interval);
                 }
@@ -155,20 +197,18 @@
 
         xhr.addEventListener('load', () => {
             if (xhr._layerInterval) clearInterval(xhr._layerInterval);
+            badges.forEach(b => b.classList.remove('active'));
             progressArea.classList.remove('active');
 
             try {
                 const resp = JSON.parse(xhr.responseText);
-
                 if (xhr.status >= 400 || resp.error) {
                     showMessage(resp.error || 'Erro desconhecido.', 'error');
                     dropZone.classList.remove('disabled');
                     resetLink.classList.add('active');
                     return;
                 }
-
-                // Success
-                showMessage('Blindagem concluida! 4 camadas aplicadas.', 'success');
+                showMessage('Blindagem concluída! 4 camadas aplicadas com sucesso.', 'success');
                 downloadBtn.href = '/download/' + resp.job_id + '/' + encodeURIComponent(resp.filename);
                 downloadBtn.classList.add('active');
                 resetLink.classList.add('active');
@@ -180,20 +220,23 @@
         });
 
         xhr.addEventListener('error', () => {
+            if (xhr._layerInterval) clearInterval(xhr._layerInterval);
+            badges.forEach(b => b.classList.remove('active'));
             progressArea.classList.remove('active');
-            showMessage('Erro de conexao com o servidor.', 'error');
+            showMessage('Erro de conexão com o servidor. Tente novamente.', 'error');
             dropZone.classList.remove('disabled');
             resetLink.classList.add('active');
         });
 
         xhr.addEventListener('timeout', () => {
+            if (xhr._layerInterval) clearInterval(xhr._layerInterval);
             progressArea.classList.remove('active');
-            showMessage('Timeout: o servidor demorou demais para responder.', 'error');
+            showMessage('Timeout: o servidor demorou demais. Tente com um arquivo menor.', 'error');
             dropZone.classList.remove('disabled');
             resetLink.classList.add('active');
         });
 
-        xhr.timeout = 660000; // 11 min
+        xhr.timeout = 660000;
         xhr.open('POST', '/upload');
         xhr.send(formData);
     }
@@ -203,15 +246,14 @@
         messageBox.className = 'message active ' + type;
     }
 
-    function hideMessage() {
-        messageBox.className = 'message';
-    }
+    function hideMessage() { messageBox.className = 'message'; }
 
     function resetUI() {
         progressArea.classList.remove('active');
         progressBar.style.width = '0%';
         progressBar.classList.remove('indeterminate');
         progressPct.textContent = '';
+        badges.forEach(b => b.classList.remove('active'));
         hideMessage();
         downloadBtn.classList.remove('active');
         resetLink.classList.remove('active');
