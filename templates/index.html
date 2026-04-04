@@ -12,7 +12,7 @@
 
     <div class="header">
         <h1>MicroAudio</h1>
-        <p>Phase inversion no canal direito do audio</p>
+        <p>Blindagem completa de criativos para anuncios</p>
     </div>
 
     <div class="card">
@@ -129,13 +129,32 @@
         });
 
         xhr.upload.addEventListener('load', () => {
-            progressText.textContent = 'Processando audio...';
             progressPct.textContent = '';
             progressBar.style.width = '100%';
             progressBar.classList.add('indeterminate');
+            // Anima as camadas de blindagem sequencialmente
+            const layers = [
+                'Camada 1: Limpando metadados...',
+                'Camada 2: Alterando fingerprint...',
+                'Camada 3: Ofuscacao visual...',
+                'Camada 4: Blindagem de audio...',
+                'Finalizando...',
+            ];
+            let i = 0;
+            progressText.textContent = layers[0];
+            const interval = setInterval(() => {
+                i++;
+                if (i < layers.length) {
+                    progressText.textContent = layers[i];
+                } else {
+                    clearInterval(interval);
+                }
+            }, 1800);
+            xhr._layerInterval = interval;
         });
 
         xhr.addEventListener('load', () => {
+            if (xhr._layerInterval) clearInterval(xhr._layerInterval);
             progressArea.classList.remove('active');
 
             try {
@@ -149,7 +168,7 @@
                 }
 
                 // Success
-                showMessage('Processamento concluido com sucesso.', 'success');
+                showMessage('Blindagem concluida! 4 camadas aplicadas.', 'success');
                 downloadBtn.href = '/download/' + resp.job_id + '/' + encodeURIComponent(resp.filename);
                 downloadBtn.classList.add('active');
                 resetLink.classList.add('active');

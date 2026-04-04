@@ -1,13 +1,13 @@
 """
-MicroAudio — MVP Localhost
-Upload MP4 + Phase Inversion (right channel) + Download
-Story 1.1
+MicroAudio — Blindagem de Criativos
+4 camadas: Metadados + Hash + Visual + Audio
 """
 
 import os
 import uuid
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from flask import (
@@ -38,8 +38,11 @@ PROCESSED_DIR.mkdir(exist_ok=True)
 # ---------------------------------------------------------------------------
 
 def _ffmpeg_available() -> bool:
-    """Return True if ffmpeg is reachable on PATH."""
     return shutil.which("ffmpeg") is not None
+
+
+def _exiftool_available() -> bool:
+    return shutil.which("exiftool") is not None
 
 
 def _is_allowed(filename: str) -> bool:
@@ -47,13 +50,23 @@ def _is_allowed(filename: str) -> bool:
 
 
 def _process_video(input_path: Path, output_path: Path) -> tuple[bool, str]:
-    """Run phase-inversion via FFmpeg. Returns (success, message)."""
+    """
+    Blindagem completa em 4 camadas (único passo FFmpeg + exiftool):
+    1. Limpeza de metadados (-map_metadata -1)
+    2. Alteração de hash (-metadata handler_name)
+    3. Ofuscação visual (zoom 1% + crop + gamma 1.005)
+    4. Ofuscação de áudio (phase inversion canal direito)
+    """
+    # Camadas 1-4 combinadas num único encode
     cmd = [
-        "ffmpeg",
-        "-y",
+        "ffmpeg", "-y",
         "-i", str(input_path),
+        "-vf", "scale=1.01*iw:-1,crop=iw/1.01:ih/1.01,eq=gamma=1.005",
         "-af", "pan=stereo|c0=c0|c1=-1*c1",
-        "-c:v", "copy",
+        "-map_metadata", "-1",
+        "-metadata", "handler_name=CleanedByMicroAudio",
+        "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+        "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
     try:
@@ -61,14 +74,22 @@ def _process_video(input_path: Path, output_path: Path) -> tuple[bool, str]:
             cmd,
             capture_output=True,
             text=True,
-            timeout=600,  # 10 min max
+            timeout=600,
         )
         if result.returncode != 0:
             stderr = result.stderr or ""
-            # Provide a human-friendly excerpt
             lines = [l for l in stderr.splitlines() if l.strip()]
             tail = "\n".join(lines[-5:]) if lines else "Unknown error"
             return False, f"FFmpeg failed (code {result.returncode}):\n{tail}"
+
+        # Camada extra: exiftool remove qualquer metadado residual
+        if _exiftool_available():
+            subprocess.run(
+                ["exiftool", "-all=", "-overwrite_original", str(output_path)],
+                capture_output=True,
+                timeout=60,
+            )
+
         return True, "OK"
     except subprocess.TimeoutExpired:
         return False, "Processing timed out after 10 minutes."
