@@ -61,11 +61,10 @@ def _process_video(input_path: Path, output_path: Path) -> tuple[bool, str]:
     cmd = [
         "ffmpeg", "-y",
         "-i", str(input_path),
-        "-vf", "scale=1.01*iw:-1,crop=iw/1.01:ih/1.01,eq=gamma=1.005",
         "-af", "pan=stereo|c0=c0|c1=-1*c1",
         "-map_metadata", "-1",
         "-metadata", "handler_name=CleanedByMicroAudio",
-        "-c:v", "libx264", "-crf", "23", "-preset", "ultrafast",
+        "-c:v", "copy",
         "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
