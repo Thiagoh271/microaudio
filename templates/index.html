@@ -68,17 +68,17 @@
         <div class="drop-zone {% if not ffmpeg_ok %}disabled{% endif %}" id="dropZone">
             <div class="drop-zone-icon">🎬</div>
             <div class="drop-zone-text">
-                Arraste seu <strong>MP4</strong> aqui<br>ou clique para selecionar
+                Arraste seu <strong>vídeo ou imagem</strong> aqui<br>ou clique para selecionar
             </div>
-            <div class="drop-zone-hint">Apenas arquivos .mp4 · Até 2GB</div>
-            <input type="file" class="file-input" id="fileInput" accept=".mp4,video/mp4">
+            <div class="drop-zone-hint">MP4 · JPG · PNG · WEBP — até 2GB</div>
+            <input type="file" class="file-input" id="fileInput" accept=".mp4,video/mp4,.jpg,.jpeg,.png,.webp,image/*">
         </div>
 
         <div class="layer-badges" id="layerBadges">
             <div class="layer-badge" id="badge1"><span class="badge-dot"></span> Metadados</div>
             <div class="layer-badge" id="badge2"><span class="badge-dot"></span> Hash</div>
-            <div class="layer-badge" id="badge3"><span class="badge-dot"></span> Visual</div>
-            <div class="layer-badge" id="badge4"><span class="badge-dot"></span> Áudio</div>
+            <div class="layer-badge" id="badge3"><span class="badge-dot"></span> <span class="badge-label">Visual</span></div>
+            <div class="layer-badge" id="badge4"><span class="badge-dot"></span> <span class="badge-label">Áudio</span></div>
         </div>
 
         <div class="progress-area" id="progressArea">
@@ -132,22 +132,44 @@
     fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) handleFile(fileInput.files[0]); });
     resetBtn.addEventListener('click', resetUI);
 
+    const VIDEO_EXT = ['.mp4'];
+    const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
+
+    function fileKind(name) {
+        const n = name.toLowerCase();
+        if (VIDEO_EXT.some(e => n.endsWith(e))) return 'video';
+        if (IMAGE_EXT.some(e => n.endsWith(e))) return 'image';
+        return '';
+    }
+
     function handleFile(file) {
-        if (!file.name.toLowerCase().endsWith('.mp4')) {
-            showMessage('Formato inválido. Apenas arquivos MP4 são aceitos.', 'error');
+        const kind = fileKind(file.name);
+        if (!kind) {
+            showMessage('Formato inválido. Aceitos: MP4, JPG, PNG, WEBP.', 'error');
             return;
         }
-        uploadFile(file);
+        uploadFile(file, kind);
     }
 
     function activateBadge(index) {
         badges.forEach((b, i) => b.classList.toggle('active', i === index));
     }
 
-    function uploadFile(file) {
+    function uploadFile(file, kind) {
         const formData = new FormData();
         formData.append('file', file);
         const xhr = new XMLHttpRequest();
+
+        // Rótulos da camada 3/4 conforme o tipo de mídia
+        const badge3Label = badges[2].querySelector('.badge-label');
+        const badge4Label = badges[3].querySelector('.badge-label');
+        if (kind === 'image') {
+            if (badge3Label) badge3Label.textContent = 'Geometria';
+            if (badge4Label) badge4Label.textContent = 'Ruído';
+        } else {
+            if (badge3Label) badge3Label.textContent = 'Visual';
+            if (badge4Label) badge4Label.textContent = 'Áudio';
+        }
 
         progressArea.classList.add('active');
         dropZone.classList.add('disabled');
@@ -171,7 +193,13 @@
             progressBar.style.width = '100%';
             progressBar.classList.add('indeterminate');
 
-            const layers = [
+            const layers = kind === 'image' ? [
+                { text: 'Camada 1: Limpando metadados...', badge: 0 },
+                { text: 'Camada 2: Alterando fingerprint...', badge: 1 },
+                { text: 'Camada 3: Quebrando perceptual hash...', badge: 2 },
+                { text: 'Camada 4: Aplicando ruído adversarial...', badge: 3 },
+                { text: 'Finalizando...', badge: -1 },
+            ] : [
                 { text: 'Camada 1: Limpando metadados...', badge: 0 },
                 { text: 'Camada 2: Alterando fingerprint...', badge: 1 },
                 { text: 'Camada 3: Ofuscação visual...', badge: 2 },
